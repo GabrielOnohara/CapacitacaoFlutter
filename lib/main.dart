@@ -1,198 +1,135 @@
-import 'dart:math';
-import 'dart:io';
-
-import 'package:expenses/components/transaction_form.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:appfinal/task.dart';
+import 'task_list.dart';
+import 'task_form.dart';
 
-import 'components/transaction_form.dart';
-import 'components/transaction_list.dart';
-import 'components/chart.dart';
-import 'models/transaction.dart';
 
-main() => runApp(ExpensesApp());
+ void main(){
+    runApp(MaterialApp(
+      home: HomePage(),
+    ));
+ }
 
-class ExpensesApp extends StatelessWidget {
+class HomePage extends StatefulWidget {
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      home: MyHomePage(),
-      theme: ThemeData(
-        primarySwatch: Colors.purple,
-        accentColor: Colors.amber,
-        fontFamily: 'Quicksand',
-        textTheme: ThemeData.light().textTheme.copyWith(
-              title: TextStyle(
-                fontFamily: 'OpenSans',
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-              button: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-        appBarTheme: AppBarTheme(
-          textTheme: ThemeData.light().textTheme.copyWith(
-                title: TextStyle(
-                  fontFamily: 'OpenSans',
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-        ),
-      ),
-    );
-  }
+  _HomePageState createState() => _HomePageState();
 }
 
-class MyHomePage extends StatefulWidget {
+
+class _HomePageState extends State<HomePage>
+    with SingleTickerProviderStateMixin {
+  AnimationController _controller;
+
   @override
-  _MyHomePageState createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  final List<Transaction> _transactions = [];
-  bool _showChart = false;
-
-  List<Transaction> get _recentTransactions {
-    return _transactions.where((tr) {
-      return tr.date.isAfter(DateTime.now().subtract(
-        Duration(days: 7),
-      ));
-    }).toList();
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this);
   }
 
-  _addTransaction(String title, double value, DateTime date) {
-    final newTransaction = Transaction(
-      id: Random().nextDouble().toString(),
+  @override
+  void dispose() {
+    super.dispose();
+    _controller.dispose();
+  }
+  
+  final List<Task> tasks = [];
+
+    
+  addTask(String title,DateTime date,Color color){
+
+    final  newTask = Task(
+      id: DateTime.now().millisecond.toString(),
       title: title,
-      value: value,
       date: date,
+      color:color,
+      
     );
 
     setState(() {
-      _transactions.add(newTransaction);
+      tasks.add(newTask);
     });
 
     Navigator.of(context).pop();
   }
 
-  _removeTransaction(String id) {
+  _removeTask(String id){
     setState(() {
-      _transactions.removeWhere((tr) => tr.id == id);
+      tasks.removeWhere((tr) => tr.id == id);
     });
   }
 
-  _openTransactionFormModal(BuildContext context) {
+  _openTaskFormModal(BuildContext context){
     showModalBottomSheet(
-      context: context,
-      builder: (_) {
-        return TransactionForm(_addTransaction);
+      context: context, 
+      builder: (_){
+         return TaskForm(addTask);
       },
-    );
+      );
   }
 
-  Widget _getIconButton(IconData icon, Function fn) {
-    return Platform.isIOS
-        ? GestureDetector(onTap: fn, child: Icon(icon))
-        : IconButton(icon: Icon(icon), onPressed: fn);
-  }
+    
+
+ Widget _getIconButton(IconData icon, Function fn){
+   return IconButton(
+     icon: Icon(icon), 
+     onPressed: fn);
+ }
 
   @override
   Widget build(BuildContext context) {
-    final mediaQuery = MediaQuery.of(context);
-    bool isLandscape = mediaQuery.orientation == Orientation.landscape;
+    
+    
+      final mediaQuery = MediaQuery.of(context);
 
-    final iconList = Platform.isIOS ? CupertinoIcons.refresh : Icons.list;
-    final chartList =
-        Platform.isIOS ? CupertinoIcons.refresh : Icons.show_chart;
-
-    final actions = <Widget>[
-      if (isLandscape)
+      final actions = <Widget> [
         _getIconButton(
-          _showChart ? iconList : chartList,
-          () {
-            setState(() {
-              _showChart = !_showChart;
-            });
-          },
-        ),
-      _getIconButton(
-        Platform.isIOS ? CupertinoIcons.add : Icons.add,
-        () => _openTransactionFormModal(context),
-      ),
-    ];
+          Icons.add,
+          () => _openTaskFormModal(context),
+         ),
+      ];
 
-    final PreferredSizeWidget appBar = Platform.isIOS
-        ? CupertinoNavigationBar(
-            middle: Text('Despesas Pessoais'),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: actions,
-            ),
+      final PreferredSizeWidget appBar = 
+       AppBar(
+         backgroundColor: Colors.orangeAccent,
+         title: Text('Minhas Tarefas '),
+         actions: actions,
+       );
+      
+
+      
+      final avaliableHeight = mediaQuery.size.height - 
+      appBar.preferredSize.height - 
+      mediaQuery.padding.top;
+      
+
+      final bodyPage = SafeArea(
+        child: SingleChildScrollView(
+          child:Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Image.asset("images/Ocupado.jfif",
+              fit: BoxFit.cover,
+              ),
+              Container(
+                height: avaliableHeight* 0.7,
+                child: TaskList(tasks, _removeTask),
+              ),
+            ],
           )
-        : AppBar(
-            title: Text('Despesas Pessoais'),
-            actions: actions,
-          );
+        )
+      );
 
-    final availableHeight = mediaQuery.size.height -
-        appBar.preferredSize.height -
-        mediaQuery.padding.top;
 
-    final bodyPage = SafeArea(
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            // if (isLandscape)
-            //   Row(
-            //     mainAxisAlignment: MainAxisAlignment.center,
-            //     children: <Widget>[
-            //       Text('Exibir Gráfico'),
-            //       Switch.adaptive(
-            //         activeColor: Theme.of(context).accentColor,
-            //         value: _showChart,
-            //         onChanged: (value) {
-            //           setState(() {
-            //             _showChart = value;
-            //           });
-            //         },
-            //       ),
-            //     ],
-            //   ),
-            if (_showChart || !isLandscape)
-              Container(
-                height: availableHeight * (isLandscape ? 0.8 : 0.3),
-                child: Chart(_recentTransactions),
-              ),
-            if (!_showChart || !isLandscape)
-              Container(
-                height: availableHeight * (isLandscape ? 1 : 0.7),
-                child: TransactionList(_transactions, _removeTransaction),
-              ),
-          ],
-        ),
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: appBar,
+      body:   bodyPage, 
+      floatingActionButton: FloatingActionButton(
+        onPressed:() => _openTaskFormModal(context),
+        child: Icon(Icons.add),
+        backgroundColor: Colors.orangeAccent,
       ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
-
-    return Platform.isIOS
-        ? CupertinoPageScaffold(
-            navigationBar: appBar,
-            child: bodyPage,
-          )
-        : Scaffold(
-            appBar: appBar,
-            body: bodyPage,
-            floatingActionButton: Platform.isIOS
-                ? Container()
-                : FloatingActionButton(
-                    child: Icon(Icons.add),
-                    onPressed: () => _openTransactionFormModal(context),
-                  ),
-            floatingActionButtonLocation:
-                FloatingActionButtonLocation.centerFloat,
-          );
   }
 }
